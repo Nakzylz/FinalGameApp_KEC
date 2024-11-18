@@ -4,88 +4,113 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.util.Log
 import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 
 class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback {
-
     private val paint: Paint = Paint()
+    private val player: Player = Player(500f, 1600f, context, 100, 100)  // Initialize player
+    private val enemies: MutableList<Enemy> = mutableListOf()
+
+    private val screenWidth = context.resources.displayMetrics.widthPixels
+    private val screenHeight = context.resources.displayMetrics.heightPixels
+
     private val gameThread: GameThread
-    private val player: Player = Player(500f, 1600f, context, 100, 100)
-    private val enemies: MutableList<Enemy> = mutableListOf(
-        Enemy(300f, 100f, context, 80, 80), // Set enemy size (80x80)
-        Enemy(600f, 100f, context, 80, 80)
-    )
-    private val bullets: MutableList<Bullet> = mutableListOf()
 
     init {
         holder.addCallback(this)
-        gameThread = GameThread(this, holder)
-        paint.color = Color.WHITE
-        spawnEnemies()
-    }
-
-    override fun surfaceCreated(holder: SurfaceHolder) {
+        gameThread = GameThread(holder, this)
         gameThread.isRunning = true
-        gameThread.start()
     }
 
-    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-
-    }
-
-    override fun surfaceDestroyed(holder: SurfaceHolder) {
-        gameThread.isRunning = false
-        try {
-            gameThread.join()
-        } catch (e: InterruptedException) {
-            e.printStackTrace()
-        }
-    }
-
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        when (event.action) {
-            MotionEvent.ACTION_MOVE -> {
-                player.move(event.x)
-            }
-            MotionEvent.ACTION_DOWN -> {
-                shootBullet()
-            }
-        }
-        return true
-    }
 
     fun update() {
-        bullets.forEach { it.update() }
+        player.update()
 
-        val iterator = bullets.iterator()
-        while (iterator.hasNext()) {
-            val bullet = iterator.next()
-            if (bullet.y < 0) {
-                iterator.remove()
+
+        val enemiesToRemove = mutableListOf<Enemy>()
+        for (enemy in enemies) {
+            enemy.update()
+            if (enemy.x < -enemy.width) {
+                enemiesToRemove.add(enemy)
             }
         }
+        enemies.removeAll(enemiesToRemove)
 
-        enemies.forEach { it.update() }
+
+        val bulletsToRemove = mutableListOf<Bullet>()
+        for (bullet in player.bullets) {
+            bullet.update()
+            if (bullet.isOffScreen()) {
+                bulletsToRemove.add(bullet)
+            }
+        }
+        player.bullets.removeAll(bulletsToRemove)
     }
 
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        canvas.drawColor(Color.BLACK)
+
+        paint.color = Color.BLACK
+        canvas.drawRect(0f, 0f, screenWidth.toFloat(), screenHeight.toFloat(), paint)
+
 
         player.draw(canvas, paint)
 
-        bullets.forEach { it.draw(canvas, paint) }
 
-        enemies.forEach { it.draw(canvas, paint) }
+        for (enemy in enemies) {
+            enemy.draw(canvas, paint)
+        }
+
+
+        for (bullet in player.bullets) {
+            bullet.draw(canvas, paint)
+        }
     }
 
 
-    private class GameThread(private val gameView: GameView, private val surfaceHolder: SurfaceHolder) : Thread() {
+    override fun surfaceCreated(holder: SurfaceHolder) {
+        gameThread.start()
+    }
+
+
+    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
+
+
+    override fun surfaceDestroyed(holder: SurfaceHolder) {
+        var retry = true
+        gameThread.isRunning = false
+        while (retry) {
+            try {
+                gameThread.join()
+                retry = false
+            } catch (e: InterruptedException) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        when (event.action) {
+            MotionEvent.ACTION_MOVE -> {
+
+                player.x = event.x - player.width / 2
+                if (player.x < 0) player.x = 0f
+                if (player.x > screenWidth - player.width) player.x = (screenWidth - player.width).toFloat()
+            }
+            MotionEvent.ACTION_DOWN -> {
+
+                player.shoot()
+            }
+        }
+        return true
+    }
+
+    private class GameThread(private val surfaceHolder: SurfaceHolder, private val gameView: GameView) : Thread() {
         var isRunning = false
 
         override fun run() {
@@ -93,9 +118,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 val canvas = surfaceHolder.lockCanvas()
                 canvas?.let {
                     synchronized(surfaceHolder) {
-
                         gameView.update()
-
                         gameView.onDraw(it)
                     }
                     surfaceHolder.unlockCanvasAndPost(it)
@@ -103,23 +126,22 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             }
         }
     }
-
-    private fun shootBullet() {
-        val bullet = Bullet(player.x, player.y)
-        bullets.add(bullet)
-    }
-
-    private fun spawnEnemies() {
-        val context = context // This will be the context from GameView or Activity
-        val enemyWidth = 80 // Set a width for the enemy (you can adjust this)
-        val enemyHeight = 80 // Set a height for the enemy (you can adjust this)
-
-        for (i in 0..4) {
-            // Pass context, newWidth, and newHeight to the Enemy constructor
-            val enemy = Enemy(100f * i, 100f, context, enemyWidth, enemyHeight)
-            enemies.add(enemy)
-        }
-    }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
