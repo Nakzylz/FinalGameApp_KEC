@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.example.finalgameapp_kec"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.finalgameapp_kec"
