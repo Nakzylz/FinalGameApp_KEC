@@ -7,7 +7,7 @@ import android.graphics.Canvas
 import android.graphics.Paint
 
 class Player(var x: Float, var y: Float, context: Context, newWidth: Int, newHeight: Int) {
-    private val bitmap: Bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.playerprefabplaceholder)
+    private val bitmap: Bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.playerspaceship1)
     var width: Int = newWidth
     var height: Int = newHeight
 
@@ -16,8 +16,6 @@ class Player(var x: Float, var y: Float, context: Context, newWidth: Int, newHei
     val bullets: MutableList<PlayerBullet> = mutableListOf()
 
     fun update() {
-        // Update player logic here
-        // Example: limit the x position within the screen bounds
         if (x < 0) x = 0f
         if (x > 1080 - width) x = 1080f - width
     }

@@ -9,7 +9,7 @@ import kotlin.random.Random
 
 class Enemy(var x: Float, var y: Float, context: Context, newWidth: Int, newHeight: Int, private val screenWidth: Float, private val screenHeight: Float) {
 
-    private val bitmap: Bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.enemyprefabplaceholder)
+    private val bitmap: Bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.enemyspaceship1)
     var width: Int = newWidth
     var height: Int = newHeight
 
@@ -52,7 +52,7 @@ class Enemy(var x: Float, var y: Float, context: Context, newWidth: Int, newHeig
         if (isOnScreen) {
             moveDownTimer++
             if (moveDownTimer > 300) {  // Wait before moving down
-                y += 5f
+                y += 10f
             }
         }
 

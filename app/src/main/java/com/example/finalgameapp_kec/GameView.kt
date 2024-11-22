@@ -1,6 +1,8 @@
 package com.example.finalgameapp_kec
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -11,7 +13,7 @@ import android.view.SurfaceView
 class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback {
 
     private val paint: Paint = Paint()
-    private val player: Player = Player(500f, 1600f, context, 100, 100)
+    private val player: Player = Player(500f, 1600f, context, 100, 200)
     private val enemies: MutableList<Enemy> = mutableListOf()
 
     private val screenWidth = context.resources.displayMetrics.widthPixels.toFloat()
@@ -20,14 +22,27 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private val gameThread: GameThread
     private var enemySpawnTimer = 0
 
+    private var background: Bitmap
+    private var backgroundY = 0f
+
     init {
+        // Load the background image
+        background = BitmapFactory.decodeResource(context.resources, R.drawable.backdropblacklittlesparkblack)
+
+        val scaleWidth = screenWidth / background.width
+        val scaleHeight = screenHeight / background.height
+        val scale = Math.max(scaleWidth, scaleHeight)
+        val scaledBackground = Bitmap.createScaledBitmap(background, (background.width * scale).toInt(), (background.height * scale).toInt(), false)
+
+        background = scaledBackground
+
         holder.addCallback(this)
         gameThread = GameThread(holder, this)
         gameThread.isRunning = true
     }
 
     fun update() {
-        // Update the player
+
         player.update()
 
         // Remove off-screen bullets
@@ -43,7 +58,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         // Spawn new enemies if there are fewer than 6
         enemySpawnTimer++
         if (enemySpawnTimer > 100 && enemies.size < 6) {  // Allow spawning only if there are fewer than 6 enemies
-            val newEnemy = Enemy(0f, 0f, context, 80, 80, screenWidth, screenHeight)
+            val newEnemy = Enemy(0f, 0f, context, 80, 180, screenWidth, screenHeight)
             newEnemy.spawnAtEdge()  // Randomly set its position and target X
             enemies.add(newEnemy)
             enemySpawnTimer = 0
@@ -68,6 +83,12 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         // Remove enemies that go off-screen
         enemies.removeAll { enemy -> enemy.x < -enemy.width || enemy.y > screenHeight }
+
+        // Move the background to create a scrolling effect
+        backgroundY += 5f  // Scroll down
+        if (backgroundY >= screenHeight) {
+            backgroundY = 0f  // Reset to create a continuous loop
+        }
     }
 
     // Collision detection between a bullet and an enemy
@@ -89,9 +110,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        // Clear screen with a black background
-        paint.color = Color.BLACK
-        canvas.drawRect(0f, 0f, screenWidth, screenHeight, paint)
+        // Draw the background image
+        canvas.drawBitmap(background, 0f, backgroundY, paint)
+        if (backgroundY > 0) {
+            canvas.drawBitmap(background, 0f, backgroundY - screenHeight, paint)
+        }
 
         // Draw the player and enemies
         player.draw(canvas, paint)
@@ -150,6 +173,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }
     }
 }
+
+
 
 
 
