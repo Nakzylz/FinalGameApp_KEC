@@ -20,9 +20,11 @@ class Enemy(var x: Float, var y: Float, context: Context, newWidth: Int, newHeig
     var isShooting = false
     var bullets: MutableList<Bullet> = mutableListOf()
     var speedX = 5f
+    var speedY = 10f  // Speed for moving downwards
 
     // Target position the enemy is moving towards
     private var targetX: Float = 0f
+    private var moveDownTimer: Int = 0  // Timer for how long the enemy has been on the screen
 
     // Modify the spawn method to ensure each enemy has a random stop position
     fun spawnAtEdge() {
@@ -36,6 +38,7 @@ class Enemy(var x: Float, var y: Float, context: Context, newWidth: Int, newHeig
         targetX = (100..(screenWidth - width).toInt()).random().toFloat()
 
         isOnScreen = false
+        moveDownTimer = 0  // Reset the timer each time the enemy spawns
     }
 
     fun update() {
@@ -55,10 +58,22 @@ class Enemy(var x: Float, var y: Float, context: Context, newWidth: Int, newHeig
             }
         }
 
-        if (x < -width) {
-            // Reset enemy if it moves off the screen
+        // If the enemy is on screen, start the timer and move down
+        if (isOnScreen) {
+            moveDownTimer++
+            // After 3 seconds (3000ms), make the enemy start moving down
+            if (moveDownTimer > 300) {
+                y += speedY  // Move the enemy down towards the player
+            }
+        }
+
+        // If the enemy moves off the screen (left or bottom), reset its position
+        if (x < -width || y > screenHeight) {
+            // Reset enemy position if it moves off-screen
+            isOnScreen = false
         }
     }
+
 
     // Shoot method (fires bullets)
     fun shoot() {
@@ -80,6 +95,7 @@ class Enemy(var x: Float, var y: Float, context: Context, newWidth: Int, newHeig
         }
     }
 }
+
 
 
 

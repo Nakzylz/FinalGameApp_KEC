@@ -30,32 +30,79 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         // Enemy spawning logic
         enemySpawnTimer++
-        if (enemySpawnTimer > 100) {  // Adjust the number for more/less frequent spawns
-            val newEnemy = Enemy(0f, 0f, context, 80, 80, screenWidth, screenHeight)  // Reasonable size for enemies
+        if (enemySpawnTimer > 100 && enemies.size < 6) {  // Allow spawning only if there are fewer than 6 enemies
+            val newEnemy = Enemy(0f, 0f, context, 80, 80, screenWidth, screenHeight)
             newEnemy.spawnAtEdge()  // Randomly set its position and target X
             enemies.add(newEnemy)
             enemySpawnTimer = 0
         }
 
-        // Update enemies
+        // Update each enemy
         val enemiesToRemove = mutableListOf<Enemy>()
-        for (enemy in enemies) {
-            enemy.update()
-            if (enemy.x < -enemy.width) {
-                enemiesToRemove.add(enemy)
-            }
-        }
-        enemies.removeAll(enemiesToRemove)
-
-        // Update player bullets
         val bulletsToRemove = mutableListOf<Bullet>()
+
+        // Handle bullet collision and update logic
         for (bullet in player.bullets) {
             bullet.update()
+
+            // Check if the bullet collides with any enemy
+            for (enemy in enemies) {
+                if (isCollision(bullet, enemy)) {
+                    bulletsToRemove.add(bullet)
+                    enemiesToRemove.add(enemy)
+                }
+            }
+
+            // Remove bullets that are off-screen
             if (bullet.isOffScreen()) {
                 bulletsToRemove.add(bullet)
             }
         }
+
+        // Remove collided bullets and enemies
         player.bullets.removeAll(bulletsToRemove)
+        enemies.removeAll(enemiesToRemove)
+
+        // Remove bullets that went off-screen
+        val remainingBulletsToRemove = mutableListOf<Bullet>()
+        for (bullet in player.bullets) {
+            bullet.update()
+            if (bullet.isOffScreen()) {
+                remainingBulletsToRemove.add(bullet)
+            }
+        }
+        player.bullets.removeAll(remainingBulletsToRemove)
+
+        // Update the enemies (move them down)
+        for (enemy in enemies) {
+            enemy.update()
+            if (enemy.x < -enemy.width || enemy.y > screenHeight) {
+                enemiesToRemove.add(enemy) // Add to removal list if it's off the screen
+            }
+        }
+
+        // Now safely remove off-screen enemies after the iteration
+        enemies.removeAll(enemiesToRemove)
+    }
+
+
+    // Collision detection between a bullet and an enemy
+    fun isCollision(bullet: Bullet, enemy: Enemy): Boolean {
+        val bulletRadius = 10f  // Radius of the bullet
+        val enemyCenterX = enemy.x
+        val enemyCenterY = enemy.y
+        val enemyWidth = enemy.width
+        val enemyHeight = enemy.height
+
+        // Check if the bullet is within the bounds of the enemy's area (circle vs. rectangle)
+        val distanceX = bullet.x - enemyCenterX
+        val distanceY = bullet.y - enemyCenterY
+
+        // Use the Pythagorean theorem to check if the bullet is within the enemy's bounding box
+        val distance = Math.sqrt((distanceX * distanceX + distanceY * distanceY).toDouble()).toFloat()
+
+        // If the distance between the bullet and enemy is less than the radius + half the width/height, a collision has occurred
+        return distance < bulletRadius + Math.max(enemyWidth, enemyHeight) / 2
     }
 
     override fun onDraw(canvas: Canvas) {
