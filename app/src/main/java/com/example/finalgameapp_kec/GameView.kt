@@ -9,11 +9,12 @@ import android.view.SurfaceHolder
 import android.view.SurfaceView
 
 class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback {
+
     private val paint: Paint = Paint()
     private val player: Player = Player(500f, 1600f, context, 100, 100)
     private val enemies: MutableList<Enemy> = mutableListOf()
 
-    private val screenWidth = context.resources.displayMetrics.widthPixels.toFloat() // Use Float for easier positioning
+    private val screenWidth = context.resources.displayMetrics.widthPixels.toFloat()
     private val screenHeight = context.resources.displayMetrics.heightPixels.toFloat()
 
     private val gameThread: GameThread
@@ -26,9 +27,20 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     fun update() {
+        // Update the player
         player.update()
 
-        // Enemy spawning logic
+        // Remove off-screen bullets
+        val bulletsToRemove = mutableListOf<PlayerBullet>()
+        for (bullet in player.bullets) {
+            bullet.update()  // Update bullet position
+            if (bullet.isOffScreen()) {
+                bulletsToRemove.add(bullet)
+            }
+        }
+        player.bullets.removeAll(bulletsToRemove)  // Remove off-screen bullets
+
+        // Spawn new enemies if there are fewer than 6
         enemySpawnTimer++
         if (enemySpawnTimer > 100 && enemies.size < 6) {  // Allow spawning only if there are fewer than 6 enemies
             val newEnemy = Enemy(0f, 0f, context, 80, 80, screenWidth, screenHeight)
@@ -37,71 +49,40 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             enemySpawnTimer = 0
         }
 
-        // Update each enemy
+        // Update the enemies and check for collisions
         val enemiesToRemove = mutableListOf<Enemy>()
-        val bulletsToRemove = mutableListOf<Bullet>()
+        val bulletsToRemoveFromEnemies = mutableListOf<PlayerBullet>()
 
-        // Handle bullet collision and update logic
-        for (bullet in player.bullets) {
-            bullet.update()
-
-            // Check if the bullet collides with any enemy
-            for (enemy in enemies) {
+        for (enemy in enemies) {
+            enemy.update()
+            for (bullet in player.bullets) {
                 if (isCollision(bullet, enemy)) {
-                    bulletsToRemove.add(bullet)
+                    bulletsToRemoveFromEnemies.add(bullet)
                     enemiesToRemove.add(enemy)
                 }
             }
-
-            // Remove bullets that are off-screen
-            if (bullet.isOffScreen()) {
-                bulletsToRemove.add(bullet)
-            }
         }
 
-        // Remove collided bullets and enemies
-        player.bullets.removeAll(bulletsToRemove)
+        player.bullets.removeAll(bulletsToRemoveFromEnemies)
         enemies.removeAll(enemiesToRemove)
 
-        // Remove bullets that went off-screen
-        val remainingBulletsToRemove = mutableListOf<Bullet>()
-        for (bullet in player.bullets) {
-            bullet.update()
-            if (bullet.isOffScreen()) {
-                remainingBulletsToRemove.add(bullet)
-            }
-        }
-        player.bullets.removeAll(remainingBulletsToRemove)
-
-        // Update the enemies (move them down)
-        for (enemy in enemies) {
-            enemy.update()
-            if (enemy.x < -enemy.width || enemy.y > screenHeight) {
-                enemiesToRemove.add(enemy) // Add to removal list if it's off the screen
-            }
-        }
-
-        // Now safely remove off-screen enemies after the iteration
-        enemies.removeAll(enemiesToRemove)
+        // Remove enemies that go off-screen
+        enemies.removeAll { enemy -> enemy.x < -enemy.width || enemy.y > screenHeight }
     }
 
-
     // Collision detection between a bullet and an enemy
-    fun isCollision(bullet: Bullet, enemy: Enemy): Boolean {
-        val bulletRadius = 10f  // Radius of the bullet
+    fun isCollision(bullet: PlayerBullet, enemy: Enemy): Boolean {
+        val bulletRadius = 10f
         val enemyCenterX = enemy.x
         val enemyCenterY = enemy.y
         val enemyWidth = enemy.width
         val enemyHeight = enemy.height
 
-        // Check if the bullet is within the bounds of the enemy's area (circle vs. rectangle)
         val distanceX = bullet.x - enemyCenterX
         val distanceY = bullet.y - enemyCenterY
 
-        // Use the Pythagorean theorem to check if the bullet is within the enemy's bounding box
         val distance = Math.sqrt((distanceX * distanceX + distanceY * distanceY).toDouble()).toFloat()
 
-        // If the distance between the bullet and enemy is less than the radius + half the width/height, a collision has occurred
         return distance < bulletRadius + Math.max(enemyWidth, enemyHeight) / 2
     }
 
@@ -169,6 +150,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }
     }
 }
+
 
 
 

@@ -6,40 +6,36 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Paint
 
-class Player(var x: Float, private var y: Float, context: Context, val width: Int, private val height: Int) {
-    private val playerBitmap: Bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.playerprefabplaceholder)
-    private val scaledBitmap: Bitmap = Bitmap.createScaledBitmap(playerBitmap, width, height, false)
+class Player(var x: Float, var y: Float, context: Context, newWidth: Int, newHeight: Int) {
+    private val bitmap: Bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.playerprefabplaceholder)
+    var width: Int = newWidth
+    var height: Int = newHeight
 
-    val bullets: MutableList<Bullet> = mutableListOf()
+    private val scaledBitmap: Bitmap = Bitmap.createScaledBitmap(bitmap, width, height, false)
+
+    val bullets: MutableList<PlayerBullet> = mutableListOf()
+
+    fun update() {
+        // Update player logic here
+        // Example: limit the x position within the screen bounds
+        if (x < 0) x = 0f
+        if (x > 1080 - width) x = 1080f - width
+    }
+
+    fun shoot() {
+        bullets.add(PlayerBullet(x + width / 2, y, 10f, 20f))  // Add a new bullet at the player's position
+    }
 
     fun draw(canvas: Canvas, paint: Paint) {
         canvas.drawBitmap(scaledBitmap, x, y, paint)
-
-
         for (bullet in bullets) {
             bullet.draw(canvas, paint)
         }
     }
-
-    fun update() {
-
-        val bulletsToRemove = mutableListOf<Bullet>()
-        for (bullet in bullets) {
-            bullet.update()
-            if (bullet.isOffScreen()) {
-                bulletsToRemove.add(bullet)
-            }
-        }
-        bullets.removeAll(bulletsToRemove)
-    }
-
-    fun shoot() {
-
-        if (bullets.size < 1) {
-            bullets.add(Bullet(x + width / 2f, y))
-        }
-    }
 }
+
+
+
 
 
 

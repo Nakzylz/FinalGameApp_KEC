@@ -5,99 +5,86 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Paint
+import kotlin.random.Random
 
 class Enemy(var x: Float, var y: Float, context: Context, newWidth: Int, newHeight: Int, private val screenWidth: Float, private val screenHeight: Float) {
+
     private val bitmap: Bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.enemyprefabplaceholder)
     var width: Int = newWidth
     var height: Int = newHeight
 
-    // Scale the bitmap to fit smaller size
     private val scaledBitmap: Bitmap = Bitmap.createScaledBitmap(bitmap, width, height, false)
 
-    var isOnScreen = false
-    private var shootCount = 0
-    private val shootLimit = 5
-    var isShooting = false
-    var bullets: MutableList<Bullet> = mutableListOf()
-    var speedX = 5f
-    var speedY = 10f  // Speed for moving downwards
-
-    // Target position the enemy is moving towards
     private var targetX: Float = 0f
     private var moveDownTimer: Int = 0  // Timer for how long the enemy has been on the screen
 
-    // Modify the spawn method to ensure each enemy has a random stop position
+    private val shootLimit = 5
+    private var shootCount = 0
+    var isOnScreen = false
+
+    var bullets: MutableList<EnemyBullet> = mutableListOf()
+
+    private var shootTimer: Int = 0  // Timer to control shooting intervals
+    private val shootInterval = 180  // Interval (frames) between each shot
+
     fun spawnAtEdge() {
         // Spawn at a random position from the right edge
         x = screenWidth + width / 2f
-
-        // Random Y position near the top
-        y = (0..screenHeight.toInt() / 4).random().toFloat()
-
-        // Random target X position for the enemy to move towards
-        targetX = (100..(screenWidth - width).toInt()).random().toFloat()
-
+        y = Random.nextInt(0, (screenHeight / 4).toInt()).toFloat()
+        targetX = Random.nextInt(100, (screenWidth - width).toInt()).toFloat()
         isOnScreen = false
-        moveDownTimer = 0  // Reset the timer each time the enemy spawns
     }
 
     fun update() {
         if (!isOnScreen) {
-            // Start moving towards the target X position
             if (x > targetX) {
-                x -= speedX
+                x -= 5f
             } else if (x < targetX) {
-                x += speedX
+                x += 5f
             }
 
-            // Stop when the enemy reaches the target X position
-            if (Math.abs(x - targetX) < speedX) {
+            if (Math.abs(x - targetX) < 5f) {
                 x = targetX
                 isOnScreen = true
-                startShooting()
             }
         }
 
-        // If the enemy is on screen, start the timer and move down
         if (isOnScreen) {
             moveDownTimer++
-            // After 3 seconds (3000ms), make the enemy start moving down
-            if (moveDownTimer > 300) {
-                y += speedY  // Move the enemy down towards the player
+            if (moveDownTimer > 300) {  // Wait before moving down
+                y += 5f
             }
         }
 
-        // If the enemy moves off the screen (left or bottom), reset its position
+        // Update bullets
+        for (bullet in bullets) {
+            bullet.update()  // Update each bullet's position
+        }
+
+        // Check if the enemy should shoot again based on shootTimer
+        shootTimer++
+        if (shootTimer > shootInterval) {
+            shoot()
+            shootTimer = 0  // Reset the shootTimer after shooting
+        }
+
         if (x < -width || y > screenHeight) {
-            // Reset enemy position if it moves off-screen
-            isOnScreen = false
+            isOnScreen = false  // Reset enemy position if it moves off-screen
         }
     }
 
-
-    // Shoot method (fires bullets)
-    fun shoot() {
+    private fun shoot() {
         if (shootCount < shootLimit) {
-            bullets.add(Bullet(x, y))
+            bullets.add(EnemyBullet(x, y))  // Create a new bullet
             shootCount++
         }
     }
 
-    fun startShooting() {
-        isShooting = true
-    }
-
     fun draw(canvas: Canvas, paint: Paint) {
-        // Draw the scaled enemy bitmap
         canvas.drawBitmap(scaledBitmap, x - width / 2f, y - height / 2f, paint)
         for (bullet in bullets) {
-            bullet.draw(canvas, paint)
+            bullet.draw(canvas, paint)  // Draw all bullets
         }
     }
 }
-
-
-
-
-
 
